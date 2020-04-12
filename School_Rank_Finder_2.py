@@ -18,7 +18,7 @@ import pandas
 
 # Load the Excel file and access the Maths and Language results sheets.
 #file = input('Enter the file directory')
-file = "ADvTECH Gr8 2020 (Dex).xlsx"
+file = input("File Name")
 workbook = openpyxl.load_workbook(file, data_only=True)
 
 # Input the raw data from a given sheet
@@ -127,9 +127,9 @@ def input_data(sheet_name, headings_row):
 	for school in data:
 		for grade in data[school]:
 			for Class in data[school][grade]:
-				next_class = sheet.cell(row=count+1, column = 3).value
-				next_school = sheet.cell(row=count+1, column = 1).value
-				next_grade = sheet.cell(row=count+1, column = 2).value
+				next_class = sheet.cell(row=count, column = 3).value
+				next_school = sheet.cell(row=count, column = 1).value
+				next_grade = sheet.cell(row=count, column = 2).value
 				while next_grade == grade and next_school == school and next_class == Class:
 					data[school][grade][Class].update({'Teacher': {'Name':sheet.cell(row=count, column = 4).value},\
 		  sheet.cell(row=count, column = 8).value:{\
@@ -245,8 +245,8 @@ def rank_schools(student_ranks,ranks,grade):
 		school_ranks[school]['Grade Rank']=school_ranks[school]['G'+str(grade)]+school_ranks[school]['G'+str(grade-1)]
 		school_ranks[school]['Number of students']=len(student_ranks[school])
 	return school_ranks
-maths_data=input_data('M8',11)
-language_data=input_data('L8',10)		
+maths_data=input_data(input("Sheet Name"),int(input("Headings Row")))
+language_data=input_data(input("Sheet Name"),int(input("Headings Row")))		
 
 #Learner ranks according to Grade Level
 threshold = int(input("What's the threshold?"))
@@ -313,17 +313,7 @@ for school1 in school_rank_maths:
 				formatted[school2]['L'+str(rank)]=school_rank_language[school2][rank]
 
 
-#Write data to excel using openpyxl
 
-new_book = openpyxl.Workbook()
-sheet1=new_book.active
-sheet1.title = 'School Rank'
-sheet1.cell(row=1,column=1).value =  'School'
-for r,school in enumerate(formatted):
-	sheet1.cell(row=r+2,column = 1).value = school
-	for c, rank in enumerate(formatted[school]):
-		sheet1.cell(row = 1, column = c +2).value = rank
-		sheet1.cell(row = r +2, column = c+2).value = formatted[school][rank]
 	
 
 
@@ -340,13 +330,13 @@ for school1 in maths_averages:
 							school_averages[school1]['M'+grade]=maths_averages[school1][student][grade]/school_rank_maths[school1]['Number of students']
 						else:
 							school_averages[school1]['M'+grade]+=maths_averages[school1][student][grade]/school_rank_maths[school1]['Number of students']
-			for student in language_averages[school1]:	
-				for grade in language_averages[school1][student]:
+			for student in language_averages[school2]:	
+				for grade in language_averages[school2][student]:
 					if grade !='Details':
-						if 'L'+grade not in school_averages[school1]:
-							school_averages[school1]['L'+grade]=language_averages[school1][student][grade]/school_rank_language[school1]['Number of students']
+						if 'L'+grade not in school_averages[school2]:
+							school_averages[school2]['L'+grade]=language_averages[school1][student][grade]/school_rank_language[school1]['Number of students']
 						else:
-							school_averages[school1]['L'+grade]+=language_averages[school1][student][grade]/school_rank_language[school1]['Number of students']
+							school_averages[school2]['L'+grade]+=language_averages[school1][student][grade]/school_rank_language[school1]['Number of students']
 			
 		elif school1 not in language_averages:
 			school_averages[school1]={}
@@ -375,14 +365,7 @@ for school1 in maths_averages:
 				for grade in maths_averages[school1][learner]:
 					if grade!='Details':
 						school_averages[school2]['M'+grade]=0		
-	
-sheet2=new_book.create_sheet('School Averages')
-sheet2.cell(row=1,column=1).value= 'School'
-for r,school in enumerate(school_averages):
-	sheet2.cell(row=r+2,column=1).value=school
-	for c,grade in 	enumerate(school_averages[school]):
-		sheet2.cell(row=1,column=c+2).value=grade
-		sheet2.cell(row=r+2,column=c+2).value=school_averages[school][grade]			
+			
 
 # Learner ranks according to cognitive and content domains
 cognitive_maths_ranks, cognitive_maths_averages, cognitive_maths_scores, cognitive_maths_ticks =rank_students(maths_data,'Cognitive Domain',threshold)
@@ -418,24 +401,35 @@ for school1 in maths_averages:
 														    'Cognitive Domain':cognitive_maths_averages[school1][student1],\
 															'Content Domain':content_maths_averages[school1][student1],\
 															'Average':{}},\
-												   'Language':{'Grade Levels': {},\
-															   'Cognitive Domain': {},\
-															   'Content Domain': {},\
+												   'Language':{'Grade Levels': {'Details':''},\
+															   'Cognitive Domain': {'Details':''},\
+															   'Content Domain': {'Details':''},\
 															   'Average':{},\
 												   'Overall Average':{}}}
-
+					for i in language_ticks:
+						student_averages[student1]['Language']['Grade Levels'][i]=0
+					for i in cognitive_language_ticks:
+						  student_averages[student1]['Language']['Cognitive Domain'][i]=0
+					for i in content_language_ticks:
+						  student_averages[student1]['Language']['Content Domain'][i]=0
 				elif student2 not in student_averages and student1!=student2 and student2 not in maths_averages:
 					
 					student_averages[student2]={'Details':language_averages[school2][student2]['Details'],\
-												  'Maths':{'Grade Levels':{},\
-														    'Cognitive Domain':{},\
-															'Content Domain':{},\
+												  'Maths':{'Grade Levels':{'Details':''},\
+														    'Cognitive Domain':{'Details':''},\
+															'Content Domain':{'Details':''},\
 															'Average':{}},\
 												   'Language':{'Grade Levels': language_averages[school2][student2],\
 															   'Cognitive Domain': cognitive_language_averages[school2][student2],\
 															   'Content Domain': content_language_averages[school2][student2],\
 															   'Average':{},\
 												   'Overall Average':{}}}
+					for i in maths_ticks:
+						student_averages[student2]['Maths']['Grade Levels'][i]=0
+					for i in cognitive_maths_ticks:
+						  student_averages[student2]['Maths']['Cognitive Domain'][i]=0
+					for i in content_maths_ticks:
+						  student_averages[student2]['Maths']['Content Domain'][i]=0
 # Calculate Averages
 for student in student_averages:
 	m_average = 0
@@ -449,6 +443,25 @@ for student in student_averages:
 			l_average+=student_averages[student]['Language']['Grade Levels'][grade]/(len(student_averages[student]['Language']['Grade Levels'])-1)
 	student_averages[student]['Language']['Average']=l_average 
 	student_averages[student]['Overall Average'] = (l_average+m_average)/2
+
+#Write data to excel using openpyxl
+
+new_book = openpyxl.Workbook()
+sheet1=new_book.active
+sheet1.title = 'School Rank'
+sheet1.cell(row=1,column=1).value =  'School'
+for r,school in enumerate(formatted):
+	sheet1.cell(row=r+2,column = 1).value = school
+	for c, rank in enumerate(formatted[school]):
+		sheet1.cell(row = 1, column = c +2).value = rank
+		sheet1.cell(row = r +2, column = c+2).value = formatted[school][rank]
+sheet2=new_book.create_sheet('School Averages')
+sheet2.cell(row=1,column=1).value= 'School'
+for r,school in enumerate(school_averages):
+	sheet2.cell(row=r+2,column=1).value=school
+	for c,grade in 	enumerate(school_averages[school]):
+		sheet2.cell(row=1,column=c+2).value=grade
+		sheet2.cell(row=r+2,column=c+2).value=school_averages[school][grade]
 
 # Write student average data to excel
 sheet3=new_book.create_sheet('Student Averages')
@@ -510,4 +523,4 @@ sheet4.cell(row=2, column=1).value= 'Student'
 sheet5.cell(row=2, column=1).value= 'Student'
 sheet6.cell(row=2, column=1).value= 'Student'
 
-new_book.save('Testing3.xlsx')
+new_book.save('Grade_10_ML.xlsx')
