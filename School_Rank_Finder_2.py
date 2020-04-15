@@ -17,57 +17,17 @@ from sympy import symbols, solve, diff
 import pandas
 from datetime import datetime 
 
+#some global data objects
+assessments= {}
+curricula = {}
+#schools, classes, learners, results, etc..
+
 # Load the Excel file and access the Maths and Language results sheets.
 #file = input('Enter the file directory')
 file = input("File Name")
 workbook = openpyxl.load_workbook(file, data_only=True)
 
-# Input the raw data from a given sheet
-def input_data(assessment_name, headings_row):
-    
-    sheet = workbook[assessment_name]
-    
-    # Input the raw data
-    
-    # Fetch the headings
-    next_cell = ''
-    headings = [] #TBD: Not necessarily unique
-    contentTopics = []
-    cognitiveTopics = []
-    questions = {}
-    assessmentmark = 0.00
-    count = 1
-    while next_cell != None:
-        next_cell = sheet.cell(row=headings_row,column=count).value
-        headings.append(next_cell)
-        
-        #if it's a question column update the questions list
-        if next_cell[0] == 'Q' and next_cell[1].isnumeric():
-            qmark = sheet.cell(row=headings_row-4,column=count).value
-            qcontent = sheet.cell(row=headings_row-3,column=count).value
-            qcognitive= sheet.cell(row=headings_row-2,column=count).value
-            qgradelevel =sheet.cell(row=headings_row-1,column=count).value
-            questions.update({next_cell:{'mark': qmark,\
-                                                   'contentdomain':qcontent,\
-                                                       'cognitivedomain':qcognitive,\
-                                                           'gradelevel':qgradelevel}})
-            # questions[colname]= {}
-            
-            # questions[colname].update({'mark': qmark,\
-            #                                        'contentdomain':qcontent,\
-            #                                            'cognitivedomain':qcognitive,\
-            #                                                'gradelevel':qgradelevel)
-            assessmentmark += qmark
-            
-        count+=1
-        next_cell = sheet.cell(row=headings_row,column=count).value
-    
-    questions.update({'totalmark':assessmentmark})    
-    print (questions)
-    
- 
-        
-    # Read in the structured data in this format:
+# Read in the structured data in this format:
     '''
     data = {Grade 1:{ <--put Grade at the root
             {School 1:{
@@ -139,7 +99,78 @@ def input_data(assessment_name, headings_row):
                 .
                 .}}
 
-    '''
+let this s     '''
+# Input the raw data from a given sheet
+def input_data(assessment_name, headings_row):
+    
+    sheet = workbook[assessment_name]
+    
+    # Input the raw data
+    
+    # Fetch the headings
+    next_cell = ''
+    headings = [] #TBD: Not necessarily unique
+    contentTopics = []
+    cognitiveTopics = []
+    questions = {}
+    assessmentmark = 0.00
+    count = 1
+
+    while next_cell != None:
+        next_cell = sheet.cell(row=headings_row,column=count).value
+        headings.append(next_cell)
+        
+        #if it's a question column update the questions list
+        if next_cell[0] == 'Q' and next_cell[1].isnumeric():
+            #how many topics in curriculum?
+            if next_cell[1]==1 :
+                topiccol=count-1
+                nutopics = 0
+                nexttopic = 1
+                #get the first Topic , if it exists.
+                cell_above = sheet.cell(row=headings_row - 1,column=count).value
+                while cell_above !=next_cell:
+                    #if we found a valid subtopc and it's not the Questin aagain, add the Topic to the Curricula
+                    topicname = sheet.cell(row=headings_row - nexttopic,column=topiccol).value
+                    if topicname ! = 'Weight/mark'
+                        #if its not the mark, then add the topic to the curriculua with empty list of subtopics
+                        curricula[topicname]=[]
+                        nutopics +=1
+                            
+                    nexttopic +=1
+                    #get the next subtopic
+                    cell_above = sheet.cell(row=headings_row - nexttopic,column=count).value
+                     
+            #get the question attributes
+            qmark = sheet.cell(row=headings_row-4,column=count).value
+            questions[next_cell]={}
+            questions.update({next_cell:{'mark': qmark})            
+            questions[next_cell]['topics']=[]
+            for t in range(1, nutopics):
+                topicname = sheet.cell(row=headings_row-t,column=topiccol).value
+                subtopicname = sheet.cell(row=headings_row-t,column=count).value
+                
+                #complete the curricula subtopc to the topic if not there already
+                if curricula[topicname].count(subtopicname) == 0:
+                    curricula[topicname].append(subtopicname)
+                    
+                #associate question to it's subtopics
+                questions[next_cell]['topics'].append(subtopicname)
+                
+
+
+            assessmentmark += qmark
+            #update the curriculum sub-topics
+            curricula.update({qcontent:{qcontent}}
+            
+
+            
+        count+=1
+        next_cell = sheet.cell(row=headings_row,column=count).value
+    
+    # questions.update({'totalmark':assessmentmark})    
+    assessments.update(assessment_name:{questions,'totalmark':assessmentmark})
+    print (assessments)
     
     #read in schools
     data={}
@@ -194,7 +225,7 @@ def input_data(assessment_name, headings_row):
                 next_grade=sheet.cell(row=count, column = 2).value
                 next_school = sheet.cell(row=count, column = 1).value
                 
-    # read in all the teachers and students
+    # read in all students
     count = headings_row+1
     for school in data:
         for grade in data[school]:
@@ -202,18 +233,10 @@ def input_data(assessment_name, headings_row):
                 next_school = sheet.cell(row=count, column = 1).value
                 next_grade = sheet.cell(row=count, column = 2).value
                 next_clazz = sheet.cell(row=count, column = 3).value
+                
                 while next_grade == grade and next_school == school and next_clazz == clazz:
                     student = sheet.cell(row=count, column = 8).value
-                    data[school][grade][clazz].update({student:{'School': sheet.cell(row=count, column = 1).value,\
-                                              # 'Grade':sheet.cell(row=count, column = 2).value,\
-                                              # 'clazz':sheet.cell(row=count, column = 3).value,\
-                                              # 'First name': sheet.cell(row=count, column = 6).value,\
-                                              # 'Surname': sheet.cell(row=count, column = 7).value,\
-                                              # 'Language': sheet.cell(row=count, column = 5).value,\
-                                              # 'Oldest': sheet.cell(row=count, column = 9).value,\
-                                              # 'Most recent': sheet.cell(row=count, column = 10).value,\
-                                              # 'Device': sheet.cell(row=count, column = 11).value,\
-                                                  'Results':{},\
+                    data[school][grade][clazz].update({student:{'Assessments':{assessment_name:{}},\
                                               'Scores':{},\
                                               'Number':count}})
                     #read next row
