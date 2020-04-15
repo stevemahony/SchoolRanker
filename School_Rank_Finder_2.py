@@ -115,17 +115,17 @@ def input_data(assessment_name, headings_row):
     questions = {}
     assessmentmark = 0.00
     count = 1
+    nutopics = 0
 
     while next_cell != None:
         next_cell = sheet.cell(row=headings_row,column=count).value
         headings.append(next_cell)
         
-        #if it's a question column update the questions list
+        #if it's a question column update the questions list and topic maps
         if next_cell[0] == 'Q' and next_cell[1].isnumeric():
             #how many topics in curriculum?
             if next_cell[1]==1 :
                 topiccol=count-1
-                nutopics = 0
                 nexttopic = 1
                 #get the first Topic , if it exists.
                 cell_above = sheet.cell(row=headings_row - 1,column=count).value
@@ -142,7 +142,7 @@ def input_data(assessment_name, headings_row):
                     cell_above = sheet.cell(row=headings_row - nexttopic,column=count).value
                      
             #get the question attributes
-            qmark = sheet.cell(row=headings_row-4,column=count).value
+            qmark = sheet.cell(row=headings_row-(nutopics+1),column=count).value
             questions[next_cell]={}
             questions.update({next_cell:{'mark': qmark})            
             questions[next_cell]['topics']=[]
@@ -156,15 +156,12 @@ def input_data(assessment_name, headings_row):
                     
                 #associate question to it's subtopics
                 questions[next_cell]['topics'].append(subtopicname)
-                
-
-
+            
             assessmentmark += qmark
-            #update the curriculum sub-topics
-            curricula.update({qcontent:{qcontent}}
+            
             
 
-            
+        #get next heading    
         count+=1
         next_cell = sheet.cell(row=headings_row,column=count).value
     
