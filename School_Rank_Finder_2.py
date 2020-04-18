@@ -28,7 +28,7 @@ file = input("File Name")
 workbook = openpyxl.load_workbook(file, data_only=True)
 
 # Read in the structured data in this format:
-    '''
+'''
     data = {Grade 1:{ <--put Grade at the root
             {School 1:{
                 clazz 1: 
@@ -99,11 +99,13 @@ workbook = openpyxl.load_workbook(file, data_only=True)
                 .
                 .}}
 
-let this s     '''
+'''
 # Input the raw data from a given sheet
 def input_data(assessment_name, headings_row):
     
     sheet = workbook[assessment_name]
+    assessments[assessment_name]={}
+    curricula[assessment_name]={}
     
     # Input the raw data
     
@@ -116,6 +118,7 @@ def input_data(assessment_name, headings_row):
     assessmentmark = 0.00
     count = 1
     nutopics = 0
+    topiccol = 0
 
     while next_cell != None:
         next_cell = sheet.cell(row=headings_row,column=count).value
@@ -124,7 +127,10 @@ def input_data(assessment_name, headings_row):
         #if it's a question column update the questions list and topic maps
         if next_cell[0] == 'Q' and next_cell[1].isnumeric():
             #how many topics in curriculum?
-            if next_cell[1]==1 :
+            # if next_cell[1]=='1' :
+            #while we are still on question 1
+            if topiccol == 0 :
+                #once we have found our Questions: set the Curriculum Topic col one back to get the Topic names
                 topiccol=count-1
                 nexttopic = 1
                 #get the first Topic , if it exists.
@@ -132,9 +138,9 @@ def input_data(assessment_name, headings_row):
                 while cell_above !=next_cell:
                     #if we found a valid subtopc and it's not the Questin aagain, add the Topic to the Curricula
                     topicname = sheet.cell(row=headings_row - nexttopic,column=topiccol).value
-                    if topicname ! = 'Weight/mark'
+                    if topicname != 'Weight/mark':
                         #if its not the mark, then add the topic to the curriculua with empty list of subtopics
-                        curricula[topicname]=[]
+                        curricula[assessment_name][topicname]={}
                         nutopics +=1
                             
                     nexttopic +=1
@@ -144,16 +150,25 @@ def input_data(assessment_name, headings_row):
             #get the question attributes
             qmark = sheet.cell(row=headings_row-(nutopics+1),column=count).value
             questions[next_cell]={}
-            questions.update({next_cell:{'mark': qmark})            
+            questions.update({next_cell:{'mark': qmark}})           
             questions[next_cell]['topics']=[]
-            for t in range(1, nutopics):
+            for t in range(1, nutopics+1):
                 topicname = sheet.cell(row=headings_row-t,column=topiccol).value
                 subtopicname = sheet.cell(row=headings_row-t,column=count).value
                 
                 #complete the curricula subtopc to the topic if not there already
-                if curricula[topicname].count(subtopicname) == 0:
-                    curricula[topicname].append(subtopicname)
+                # if curricula[topicname] == None :
+                #     curricula[topicname].append(subtopicname)
                     
+                if subtopicname not in curricula[assessment_name][topicname]:
+                    curricula[assessment_name][topicname][subtopicname]=qmark
+                else:
+                    curricula[assessment_name][topicname][subtopicname]+=qmark
+                        
+                #add to the total marks in this topic in this assessment
+                # subtopictotalmark += mark
+               
+
                 #associate question to it's subtopics
                 questions[next_cell]['topics'].append(subtopicname)
             
@@ -166,8 +181,10 @@ def input_data(assessment_name, headings_row):
         next_cell = sheet.cell(row=headings_row,column=count).value
     
     # questions.update({'totalmark':assessmentmark})    
-    assessments.update(assessment_name:{questions,'totalmark':assessmentmark})
+    assessments.update({assessment_name:{'questions':questions,'totalmark':assessmentmark}})
+    # questions.update({next_cell:{'mark': qmark}})
     print (assessments)
+    print (curricula)
     
     #read in schools
     data={}
@@ -261,13 +278,22 @@ def input_data(assessment_name, headings_row):
                         unattemptedmarks = 0.00
                         
                         #read in Q1 ... Q'n'
+                        #read through the questions list
+                        # for qname, qdetails in questions.items():
+                        #     print (qname,qdetails)
+                            
+                            
                         while next_cell[0] == 'Q' and next_cell[1].isnumeric():
+                            
+                            qname = next_cell
+                            
                             # if next_cell == 'Q50':
                             #     print(next_cell)
-                            print(' Question Nu: ' + next_cell)    
+                            print(' Question Nu: ' + qname)    
                             #get the question mark
                             #TBD: read in from a Question list
                             questionmark = sheet.cell(row = headings_row-4 , column = count).value
+                            # questionmark = qdetails['mark']
                             print ('Q mark: ' + str(questionmark))
                             print ('Total mark: ' + str(totalmarks))
                             
@@ -275,24 +301,13 @@ def input_data(assessment_name, headings_row):
                             
                             studentRow = data[school][grade][clazz][student]['Number']
                             
+                            #if the results is a non-attempt of "-" then increment the non attemptes, and mark it wrong
                             if sheet.cell(row = studentRow, column = count).value == '-':
                                 unattemptedmarks += questionmark
                                 mark=0
-#                                 data[school][grade][clazz][student]['Scores'].update({sheet.cell(row = headings_row , column = count).value:{\
-#                                          'Mark':0,\
-#                                          'Grade Level': sheet.cell(row = headings_row -1 , column = count).value,\
-#                                          'Cognitive Domain': sheet.cell(row = headings_row -2 , column = count).value,\
-#                                          'Content Domain':sheet.cell(row = headings_row -3 , column = count).value}})
                             else:
                                 mark = sheet.cell(row = studentRow , column = count).value
-                               
-    
-#                                 data[school][grade][clazz][student]['Scores'].update({sheet.cell(row = headings_row , column = count).value:{\
-#                                              'Mark':sheet.cell(row = studentRow , column = count).value,\
-#                                              'Grade Level': sheet.cell(row = headings_row -1 , column = count).value,\
-#                                              'Cognitive Domain': sheet.cell(row = headings_row -2 , column = count).value,\
-#                                              'Content Domain':sheet.cell(row = headings_row -3 , column = count).value}})
-                                
+                              
                             #add to the student mark
                             studentmark += mark
                                 
@@ -301,7 +316,7 @@ def input_data(assessment_name, headings_row):
                             cognitiveDomain = sheet.cell(row = headings_row -2 , column = count).value
                             contentDomain = sheet.cell(row = headings_row -3 , column = count).value
                             
-                            data[school][grade][clazz][student]['Scores'].update({next_cell:{\
+                            data[school][grade][clazz][student]['Scores'].update({qname:{\
                                          'Mark':mark,\
                                          'Grade Level': gradeLevel,\
                                          'Cognitive Domain': cognitiveDomain,\
