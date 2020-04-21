@@ -101,19 +101,21 @@ workbook = openpyxl.load_workbook(file, data_only=True)
 
 '''
 # Input the raw data from a given sheet
-def input_data(assessment_name, headings_row):
+def input_data(assessment_name, headings_row, rankthreshold):
     
     sheet = workbook[assessment_name]
+    
+    #TBD: curricula by subject, not by assessment...
     assessments[assessment_name]={}
     curricula[assessment_name]={}
     
     # Input the raw data
     
-    # Fetch the headings
+    # Fetch the headings and configure the curriculum and assessment data
     next_cell = ''
     headings = [] #TBD: Not necessarily unique
-    contentTopics = []
-    cognitiveTopics = []
+    # contentTopics = []
+    # cognitiveTopics = []
     questions = {}
     assessmentmark = 0.00
     count = 1
@@ -151,7 +153,7 @@ def input_data(assessment_name, headings_row):
             qmark = sheet.cell(row=headings_row-(nutopics+1),column=count).value
             questions[next_cell]={}
             questions.update({next_cell:{'mark': qmark}})           
-            questions[next_cell]['topics']=[]
+            questions[next_cell]['subtopics']=[]
             for t in range(1, nutopics+1):
                 topicname = sheet.cell(row=headings_row-t,column=topiccol).value
                 subtopicname = sheet.cell(row=headings_row-t,column=count).value
@@ -170,7 +172,7 @@ def input_data(assessment_name, headings_row):
                
 
                 #associate question to it's subtopics
-                questions[next_cell]['topics'].append(subtopicname)
+                questions[next_cell]['subtopics'].append(subtopicname)
             
             assessmentmark += qmark
             
@@ -181,171 +183,141 @@ def input_data(assessment_name, headings_row):
         next_cell = sheet.cell(row=headings_row,column=count).value
     
     # questions.update({'totalmark':assessmentmark})    
-    assessments.update({assessment_name:{'questions':questions,'totalmark':assessmentmark}})
+    assessments.update({assessment_name:{'questions':questions,'totalmarks':assessmentmark}})
     # questions.update({next_cell:{'mark': qmark}})
-    print (assessments)
-    print (curricula)
+    # print (assessments)
+    # print (curricula)
     
-    #read in schools
+    # read in all the learners, their scores and calculate averages, rannks for learners, classes, school and grade
     data={}
-    next_school=''
     current_cell=''
-    count=headings_row+1
-    # read in all the school names
-    while next_school != None:
-        current_cell = sheet.cell(row=count, column = 1).value
-        if current_cell not in data:
-            data[current_cell]={}
-        count+=1
-        next_school = sheet.cell(row=count, column = 1).value
+    col_count=headings_row
+    
+    #start at the Q1 column and row 11 (i.e. headings row)
+    
+    row_count = headings_row+1
+    student = sheet.cell(row = row_count , column = headings.index('S/No')+1).value
+    
+    while student != None:
+        #get the learner details
+        grade = sheet.cell(row = row_count , column = headings.index('Grade')+1).value
+        school = sheet.cell(row = row_count , column = headings.index('School')+1).value
+        clazz = sheet.cell(row = row_count , column = headings.index('Class')+1).value
         
-    next_school=''
-    current_cell=''
-    count=headings_row+1
-
-    # read in all the grades
-    for school in data:
-#         next_school = sheet.cell(row=count+1, column = 1).value
-        next_school = sheet.cell(row=count, column = 1).value
-        while next_school == school:
-            #get the grade
-            current_cell = sheet.cell(row=count, column = 2).value
-            if current_cell not in data[school]:
-                data[school][current_cell]={}
-                
-            #get the next row
-            count+=1
-            next_school = sheet.cell(row=count, column = 1).value
+        data.update(grade {school: {clazz: {student:{'Grade':grade, 'School':school, 'Class':clazz, 'Results':{}},'Results'={}},'Results'={}},'Results'={}})
+        
+        totalmarks = 0.00
+        questionmark =0.00
+        overall = 0.00
+        attempted = 0.00
+        studentmark = 0.00
+        unattemptedmarks = 0.00
+        
             
-    # read in all the clazzes
-    next_school=''
-    next_grade=''
-    current_cell=''
-    count = headings_row+1
-    for school in data:
-        for grade in data[school]:
-#             next_school = sheet.cell(row=count+1, column = 1).value
-#             next_grade = sheet.cell(row=count+1, column = 2).value
-            next_school = sheet.cell(row=count, column = 1).value
-            next_grade = sheet.cell(row=count, column = 2).value
-            while next_grade == grade and next_school == school:
-                #get the clazz
-                current_cell = sheet.cell(row=count, column = 3).value
-                if current_cell not in data[school][grade]:
-                    data[school][grade][current_cell]={}
+        for qname , q in questions.items() :
+            
+            col_count = headings.index(qname)+1
+           #get the question mark
+            qmark = q['mark']
+            totalmarks +=qmark
+            
+            #get the stedent score for question
+            cellvalue = sheet.cell(row = row_count, column = col_count).value
+            
+            #if the results is a non-attempt of "-" then increment the non attemptes, and mark it wrong
+            if cellvalue == '-':
+                unattemptedmarks += qmark
+                mark = 0
+            else:
+                #set the question mark
+                mark = cellvalue
+                
+                
+            #increment this students totoal mark
+            studentmark += mark
+              
+            
+            #take the student mark and update the data table marks for all topics, overalls etc..            
+            for subtopicname in q['subtopics']:
+                data[grade][school][clazz][student]['Results'][subtopicname)]['totalmarks']+= qmark
+                data[grade][school][clazz]['Results'][subtopicname]['totalmarks']+=qmark
+                data[grade][school]['Results'][subtopicname]['totalmarks']+=qmark
+                data[grade]['Results'][subtopicname]['totalmarks']+=qmark
+                
+                data[grade][school][clazz][student]['Results'][subtopicname)]['studentmarks']+= mark
+                data[grade][school][clazz]['Results'][subtopicname]['studentmarks']+=mark
+                data[grade][school]['Results'][subtopicname]['studentmarks']+=mark
+                data[grade]['Results'][subtopicname]['studentmarks']+=mark
+                
+                data[grade][school][clazz][student]['Results'][subtopicname)]['unattempted']+= mark
+                data[grade][school][clazz]['Results'][subtopicname]['unattempted']+=mark
+                data[grade][school]['Results'][subtopicname]['unattempted']+=mark
+                data[grade]['Results'][subtopicname]['unattempted']+=mark
+            
+        #set the STUDENT overall average, attempted_average and the curriculum topic averages  
+        totalassessmentmarks = assessments[assessment_name]['totalmarks']
+        data[school][grade][clazz][student]['Results']['Overall'] = studentmark/totalmarks * 100
+        data[school][grade][clazz][student]['Results']['Attempted'] = studentmark/(totalassessmentmarks - unattemptedmarks) * 100
+        
+        #set the STUDENT topic %'s and if Grade Level, the rank
+        #for each result
+        for results in data[grade][school][clazz][student]['Results']:
+            
+            for topic, result in results.items():
+                
+                while topic != 'Overall' and subtopic != 'Attempted':
                     
-                #get the next row
-                count+=1
-                next_grade=sheet.cell(row=count, column = 2).value
-                next_school = sheet.cell(row=count, column = 1).value
-                
-    # read in all students
-    count = headings_row+1
-    for school in data:
-        for grade in data[school]:
-            for clazz in data[school][grade]:
-                next_school = sheet.cell(row=count, column = 1).value
-                next_grade = sheet.cell(row=count, column = 2).value
-                next_clazz = sheet.cell(row=count, column = 3).value
-                
-                while next_grade == grade and next_school == school and next_clazz == clazz:
-                    student = sheet.cell(row=count, column = 8).value
-                    data[school][grade][clazz].update({student:{'Assessments':{assessment_name:{}},\
-                                              'Scores':{},\
-                                              'Number':count}})
-                    #read next row
-                    count+=1
-                    next_grade=sheet.cell(row=count, column = 2).value
-                    next_school = sheet.cell(row=count, column = 1).value                
-                    next_clazz = sheet.cell(row=count, column = 3).value    
-    
-    
-    # read in the students' scores
-    for school in data:
-        #initiatilise the school overall, attempted, and Curriculum Avgs, and Dev level Rank
-        for grade in data[school]:
-            for clazz in data[school][grade]:
-                for student in data[school][grade][clazz]:
-
-                        #start at the Q1 column and row 11 (i.e. headings row)
-                        count = headings.index('Q1')+1
-                        next_cell = sheet.cell(row = headings_row , column = count).value
-                        totalmarks = 0.00
-                        questionmark =0.00
-                        overall = 0.00
-                        attempted = 0.00
-                        studentmark = 0.00
-                        unattemptedmarks = 0.00
+                    totalmarks = result['totalmarks']
+                    studentmarks = result['studentmarks']
+                    unattemptedmarks = result['unattemptedmarks']
+                    studentscore = studentmarks/totalmarks * 100
+                    
+                    results.append('Overall': studentscore)
+                    results.append('Attempted': studentmarks/(totalmarks-unattemptedmarks) * 100)
+                     
+                    #is the topic a Grade Level?
+                    for topicname,ctopic in curricula[assessment_name]:
+                        if topicname = 'Grade level'
+                            if stopic in currculumtopic.items():
+                                
+                            if studentscore >= threshold:
+                                results['graderank']=topic
+                            for subtopic in curriculumtopic:
+                                if suptopic == topic:
+                                    # if grade in subtopic:
+                                        
                         
-                        #read in Q1 ... Q'n'
-                        #read through the questions list
-                        # for qname, qdetails in questions.items():
-                        #     print (qname,qdetails)
-                            
-                            
-                        while next_cell[0] == 'Q' and next_cell[1].isnumeric():
-                            
-                            qname = next_cell
-                            
-                            # if next_cell == 'Q50':
-                            #     print(next_cell)
-                            print(' Question Nu: ' + qname)    
-                            #get the question mark
-                            #TBD: read in from a Question list
-                            questionmark = sheet.cell(row = headings_row-4 , column = count).value
-                            # questionmark = qdetails['mark']
-                            print ('Q mark: ' + str(questionmark))
-                            print ('Total mark: ' + str(totalmarks))
-                            
-                            totalmarks += questionmark
-                            
-                            studentRow = data[school][grade][clazz][student]['Number']
-                            
-                            #if the results is a non-attempt of "-" then increment the non attemptes, and mark it wrong
-                            if sheet.cell(row = studentRow, column = count).value == '-':
-                                unattemptedmarks += questionmark
-                                mark=0
-                            else:
-                                mark = sheet.cell(row = studentRow , column = count).value
-                              
-                            #add to the student mark
-                            studentmark += mark
-                                
-                            #TBD: Can build a question map to topics and marks here        
-                            gradeLevel = sheet.cell(row = headings_row -1 , column = count).value
-                            cognitiveDomain = sheet.cell(row = headings_row -2 , column = count).value
-                            contentDomain = sheet.cell(row = headings_row -3 , column = count).value
-                            
-                            data[school][grade][clazz][student]['Scores'].update({qname:{\
-                                         'Mark':mark,\
-                                         'Grade Level': gradeLevel,\
-                                         'Cognitive Domain': cognitiveDomain,\
-                                         'Content Domain':contentDomain}})
-                           
-                            #TBD: The Results topics elements 
-                            #need to add to the Topic marks as we go through each question
-                            if data[school][grade][clazz][student].get(gradeLevel) != None:
-                                data[school][grade][clazz][student][gradeLevel] += mark
-                            else:
-                                data[school][grade][clazz][student][gradeLevel] = mark
-                            
-                            if data[school][grade][clazz][student].get(contentDomain) != None:
-                                data[school][grade][clazz][student][contentDomain] += mark
-                            else:
-                                data[school][grade][clazz][student][contentDomain] = mark
-                                
-                            if data[school][grade][clazz][student].get(cognitiveDomain) != None:
-                                data[school][grade][clazz][student][cognitiveDomain] += mark
-                            else:
-                                data[school][grade][clazz][student][cognitiveDomain] = mark
-                            
-                            count+=1
-                            next_cell = sheet.cell(row = headings_row , column = count).value
-                            
-                        #set the overall average, attempted_average and the curriculum topic averages   
-                        data[school][grade][clazz][student]['Overall'] = studentmark/totalmarks*100
-                        data[school][grade][clazz][student]['Attempted'] = studentmark/(totalmarks-unattemptedmarks)*100
- 
+
+                    data[grade][school][clazz][student]['Results'][subtopicname)]['overall']+= (totalsubtopicmarks/subtopicmarks) * 100
+        
+        
+        
+                    #TBD: if "Grade Level" set the rank of student - we need the pecentage of 
+                    if 'graderank' not in results:
+                    
+        
+        #get the next student
+        row_count += 1
+        student = sheet.cell(row = row_count , column = headings.index('S/No')+1).value
+        
+    #now set class, school, grade results
+        
+    for grade in data:
+        for topic in grade
+                    totalsubtopicmarks = data[grade][school][clazz][student]['Results'][subtopicname)]['totalmarks']+= qmark
+            subtopicmarks = data[grade][school][clazz][student]['Results'][subtopicname)]['marks']+= studentmark
+    
+            data[grade][school][clazz][student]['Results'][subtopicname)]['overall']+= (totalsubtopicmarks/subtopicmarks) * 100
+        for school in grade:
+            for class in school:
+                overallmark = class
+                
+                
+            
+    data[grade][school][clazz][student]['Results'][subtopicname)]['overall']+= studentmark
+    data[grade][school][clazz]['Results'][subtopicname]['marks']+=studentmark
+    data[grade][school]['Results'][subtopicname]['marks']+=studentmark
+    data[grade]['Results'][subtopicname]['marks']+=studentmark
 
     return data
 
@@ -421,11 +393,12 @@ def rank_schools(student_ranks,ranks,grade):
     return school_ranks
 
 #TBD: Read in all Marksheets
-maths_data=input_data(input("Maths Sheet Name :"),11)
-language_data=input_data(input("Lang Sheet Name :"),11)
-
 #Learner ranks according to Grade Level
 threshold = int(input("What's the threshold?"))
+
+maths_data = input_data(input("Maths Sheet Name :"),11,threshold)
+language_data = input_data(input("Lang Sheet Name :"),11,threshold)
+
 maths_ranks, maths_averages, maths_scores, maths_ticks =rank_students(maths_data,'Grade Level',threshold)
 language_ranks, language_averages, language_scores, language_ticks = rank_students(language_data, 'Grade Level',threshold)        
 
