@@ -141,7 +141,8 @@ def input_data(assessment_name, headings_row, rankthreshold):
                     #if we found a valid subtopc and it's not the Questin aagain, add the Topic to the Curricula
                     topicname = sheet.cell(row=headings_row - nexttopic,column=topiccol).value
                     if topicname != 'Weight/mark':
-                        #if its not the mark, then add the topic to the curriculua with empty list of subtopics
+                        #if its not the mark, then add the topic to the curriculua with empty list of subtopics, 
+                        #and store the total marks in the assessment topics {topicname : topicmarks}
                         curricula[assessment_name][topicname]={}
                         nutopics +=1
                             
@@ -193,8 +194,7 @@ def input_data(assessment_name, headings_row, rankthreshold):
     current_cell=''
     col_count=headings_row
     
-    #start at the Q1 column and row 11 (i.e. headings row)
-    
+    #start at the Q1 column and row = headings row+1 (where the student starts)
     row_count = headings_row+1
     student = sheet.cell(row = row_count , column = headings.index('S/No')+1).value
     
@@ -237,12 +237,12 @@ def input_data(assessment_name, headings_row, rankthreshold):
             studentmark += mark
               
             
-            #take the student mark and update the data table marks for all topics, overalls etc..            
+            #for the linked Question Topics: Take the student mark and update the data table marks for all topics, overalls etc..            
             for subtopicname in q['subtopics']:
-                data[grade][school][clazz][student]['Results'][subtopicname)]['totalmarks']+= qmark
-                data[grade][school][clazz]['Results'][subtopicname]['totalmarks']+=qmark
-                data[grade][school]['Results'][subtopicname]['totalmarks']+=qmark
-                data[grade]['Results'][subtopicname]['totalmarks']+=qmark
+                # data[grade][school][clazz][student]['Results'][subtopicname)]['totalmarks']+= qmark
+                # data[grade][school][clazz]['Results'][subtopicname]['totalmarks']+=qmark
+                # data[grade][school]['Results'][subtopicname]['totalmarks']+=qmark
+                # data[grade]['Results'][subtopicname]['totalmarks']+=qmark
                 
                 data[grade][school][clazz][student]['Results'][subtopicname)]['studentmarks']+= mark
                 data[grade][school][clazz]['Results'][subtopicname]['studentmarks']+=mark
@@ -254,70 +254,88 @@ def input_data(assessment_name, headings_row, rankthreshold):
                 data[grade][school]['Results'][subtopicname]['unattempted']+=mark
                 data[grade]['Results'][subtopicname]['unattempted']+=mark
             
+                                    
+        #set the STUDENT topic %'s and if Grade Level, the rank
+        #for the students collection of results
+        for results in data[grade][school][clazz][student]['Results']:
+            #sort the topics (in particular we want the Grades ordered in Ascencing order)
+            # sortedkeys = sorted(list(results))
+            ranktopiccount = 1
+            #for each subresult by topic
+            # for stopic in sorted(list(results))sortedkeys:
+            for stopic, result in sorted(results):
+                # result = results(topickey)
+                
+                #Get the Topic for the resultsubtopic
+                for topickey, subtopicitem in curriculu[assessment_name]:
+                    if subtopicitem == stopic:
+                        currtopic = topickey
+                        #found the topic; exit
+                        break
+                 
+                #total marks for the subtopic in this assessment
+                totalmarks = curricula[assessment_name][currtopic][stopic]                                
+                # totalmarks = result['totalmarks']
+                studentmarks = result['studentmarks']
+                unattemptedmarks = result['unattemptedmarks']
+                
+                
+                studentscore = studentmarks/totalmarks * 100
+                attemptedscore = studentmarks/(totalmarks - unattemptedmarks) * 100
+                
+                #now save the overall and attepted for the subtopic
+                results.append('overall': studentscore)
+                results.append('attempted': attemptedscore)
+                 
+                #is the topic a Grade Level? Calculate the Grade Rank
+                if currtopic = 'Grade level':
+                    #store the first topic as the grade rank to start anyway, irrespective of the score. If we get anything higher, we'll replace it
+                    if ranktopiccount == 1:
+                        results['graderank']=stopic
+                    else
+                        #if the score is >= threshold, and the stopic is a higher grade then the current, the replace the rank
+                        if studentscore >= threshold:
+                        
+                            #is the scope > threshold? Save this
+                            currrank = results['graderank']
+                            
+                            #we shouldn'thave to check here that the next grade is higher (>) as it's sorted, right?
+                            # if stopic > currrank:
+                            
+                            #overwrite the graderank to this Grade Level subtopic
+                            results['graderank']=stopic
+                            
+                            #increment the class, school and Grade grade rank values (nu. learners in the rank)
+                            data[grade][school][clazz]['Results'][subtopicname]['graderankcount']+=1
+                            data[grade][school]['Results'][subtopicname]['graderankcount']+=1
+                            data[grade]['Results'][subtopicname]['graderankcount']+=1
+                        
+                    #increment our grade rank topic count
+                    ranktopiccount+=1
+
+                        
         #set the STUDENT overall average, attempted_average and the curriculum topic averages  
         totalassessmentmarks = assessments[assessment_name]['totalmarks']
         data[school][grade][clazz][student]['Results']['Overall'] = studentmark/totalmarks * 100
         data[school][grade][clazz][student]['Results']['Attempted'] = studentmark/(totalassessmentmarks - unattemptedmarks) * 100
-        
-        #set the STUDENT topic %'s and if Grade Level, the rank
-        #for each result
-        for results in data[grade][school][clazz][student]['Results']:
-            
-            for topic, result in results.items():
-                
-                while topic != 'Overall' and subtopic != 'Attempted':
-                    
-                    totalmarks = result['totalmarks']
-                    studentmarks = result['studentmarks']
-                    unattemptedmarks = result['unattemptedmarks']
-                    studentscore = studentmarks/totalmarks * 100
-                    
-                    results.append('Overall': studentscore)
-                    results.append('Attempted': studentmarks/(totalmarks-unattemptedmarks) * 100)
-                     
-                    #is the topic a Grade Level?
-                    for topicname,ctopic in curricula[assessment_name]:
-                        if topicname = 'Grade level'
-                            if stopic in currculumtopic.items():
-                                
-                            if studentscore >= threshold:
-                                results['graderank']=topic
-                            for subtopic in curriculumtopic:
-                                if suptopic == topic:
-                                    # if grade in subtopic:
-                                        
-                        
-
-                    data[grade][school][clazz][student]['Results'][subtopicname)]['overall']+= (totalsubtopicmarks/subtopicmarks) * 100
-        
-        
-        
-                    #TBD: if "Grade Level" set the rank of student - we need the pecentage of 
-                    if 'graderank' not in results:
-                    
+                       
+        #TODO: Count Nu. students in grade/school/class
+        data[grade][school][clazz]['nustudents']+=1
+        data[grade][school]['nustudents']+=1
+        data[grade]['nustudents']+=1
         
         #get the next student
         row_count += 1
         student = sheet.cell(row = row_count , column = headings.index('S/No')+1).value
         
     #now set class, school, grade results
-        
     for grade in data:
-        for topic in grade
-                    totalsubtopicmarks = data[grade][school][clazz][student]['Results'][subtopicname)]['totalmarks']+= qmark
-            subtopicmarks = data[grade][school][clazz][student]['Results'][subtopicname)]['marks']+= studentmark
-    
-            data[grade][school][clazz][student]['Results'][subtopicname)]['overall']+= (totalsubtopicmarks/subtopicmarks) * 100
-        for school in grade:
-            for class in school:
-                overallmark = class
-                
-                
-            
-    data[grade][school][clazz][student]['Results'][subtopicname)]['overall']+= studentmark
-    data[grade][school][clazz]['Results'][subtopicname]['marks']+=studentmark
-    data[grade][school]['Results'][subtopicname]['marks']+=studentmark
-    data[grade]['Results'][subtopicname]['marks']+=studentmark
+        studenttotalmarks = grade['studentmarks']
+        studentunattemptedmarks =grade['unattemptedmarks']
+        gradenustudents = data[grade]['nustudents']
+        gradeoverall = (studenttotalmarks/(totalassessmentmarks * gradenustudents) * 100)
+        grade['Results']['Overall']=gradeoverall
+
 
     return data
 
